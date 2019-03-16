@@ -1,0 +1,30 @@
+---
+# tasks file for k8s-singlenode
+
+- name: Register deployed count
+  shell: helm ls | grep ingress | wc -l
+  register: deployed
+
+- debug:
+    var: deployed.stdout
+
+- name: install
+  raw: |
+    helm install stable/nginx-ingress \
+     --name {{ releaseName }} \
+     --wait
+  args:
+    executable: /bin/bash
+  when: deployed.stdout == "0"
+  register: install
+  ignore_errors: True
+
+- name: Clean install
+  shell: helm delete --purge ingress
+  when: deployed.stdout == "0" and install.rc != 0
+
+- name: Fail install
+  fail:
+    msg: "{{ install.stdout}}"
+  when: deployed.stdout == "0" and install.rc != 0
+
